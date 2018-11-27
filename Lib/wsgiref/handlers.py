@@ -133,12 +133,14 @@ class BaseHandler:
         # prematurely closing.  Async servers must return from 'run()' without
         # closing if there might still be output to iterate over.
         try:
-            self.setup_environ()
-            self.result = application(self.environ, self.start_response)
-            self.finish_response()
+            if self:      
+                self.setup_environ()
+                self.result = application(self.environ, self.start_response)
+                self.finish_response()
         except:
             try:
-                self.handle_error()
+                if self:      
+                    self.handle_error()
             except:
                 # If we get an error handling an error, just give up already!
                 self.close()
@@ -177,7 +179,8 @@ class BaseHandler:
         try:
             if not self.result_is_file() or not self.sendfile():
                 for data in self.result:
-                    self.write(data)
+                    if self:      
+                        self.write(data)
                 self.finish_content()
         finally:
             self.close()
@@ -270,8 +273,9 @@ class BaseHandler:
 
         elif not self.headers_sent:
             # Before the first output, send the stored headers
-            self.bytes_sent = len(data)    # make sure we know content-length
-            self.send_headers()
+            if self:      
+                self.bytes_sent = len(data)    # make sure we know content-length
+                self.send_headers()
         else:
             self.bytes_sent += len(data)
 
@@ -326,8 +330,9 @@ class BaseHandler:
 
     def send_headers(self):
         """Transmit headers to the client, via self._write()"""
-        self.cleanup_headers()
-        self.headers_sent = True
+        if self:      
+            self.cleanup_headers()
+            self.headers_sent = True
         if not self.origin_server or self.client_is_modern():
             self.send_preamble()
             self._write(bytes(self.headers))
@@ -341,7 +346,9 @@ class BaseHandler:
 
     def client_is_modern(self):
         """True if client can accept status and headers"""
-        return self.environ['SERVER_PROTOCOL'].upper() != 'HTTP/0.9'
+        if self:
+            if 'SERVER_PROTOCOL' in self.environ.keys():
+                return self.environ['SERVER_PROTOCOL'].upper() != 'HTTP/0.9'
 
 
     def log_exception(self,exc_info):
@@ -365,7 +372,8 @@ class BaseHandler:
         self.log_exception(sys.exc_info())
         if not self.headers_sent:
             self.result = self.error_output(self.environ, self.start_response)
-            self.finish_response()
+            if self:      
+                self.finish_response()
         # XXX else: attempt advanced recovery techniques for HTML or text?
 
     def error_output(self, environ, start_response):
@@ -441,16 +449,20 @@ class SimpleHandler(BaseHandler):
         self.wsgi_multiprocess = multiprocess
 
     def get_stdin(self):
-        return self.stdin
+        if self:      
+            return self.stdin
 
     def get_stderr(self):
-        return self.stderr
+        if self:      
+            return self.stderr
 
     def add_cgi_vars(self):
-        self.environ.update(self.base_env)
+        if self:      
+            self.environ.update(self.base_env)
 
     def _write(self,data):
-        result = self.stdout.write(data)
+        if self:      
+            result = self.stdout.write(data)
         if result is None or result == len(data):
             return
         from warnings import warn
@@ -463,8 +475,9 @@ class SimpleHandler(BaseHandler):
             result = self.stdout.write(data)
 
     def _flush(self):
-        self.stdout.flush()
-        self._flush = self.stdout.flush
+        if self:      
+            self.stdout.flush()
+            self._flush = self.stdout.flush
 
 
 class BaseCGIHandler(SimpleHandler):
