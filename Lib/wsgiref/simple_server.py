@@ -31,9 +31,10 @@ class ServerHandler(SimpleHandler):
 
     def close(self):
         try:
-            self.request_handler.log_request(
-                self.status.split(' ',1)[0], self.bytes_sent
-            )
+            if self.status:
+                self.request_handler.log_request(
+                    self.status.split(' ',1)[0], self.bytes_sent
+                )
         finally:
             SimpleHandler.close(self)
 
